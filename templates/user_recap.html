@@ -56,15 +56,6 @@
         <h1>Spotify Recap di {{ user }}</h1>
 
         <div class="section">
-            <h2>Top Generi Musicali</h2>
-            <ul>
-                {% for genre in top_genres %}
-                    <li>{{ genre }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="section">
             <h2>Top Brani</h2>
             {% for track in top_tracks %}
             <div class="track">
@@ -84,7 +75,14 @@
                 {% endfor %}
             </ul>
         </div>
-
+        <div class="section">
+            <h2>Top Generi Musicali</h2>
+            <ul>
+                {% for genre in top_genres %}
+                    <li>{{ genre }}</li>
+                {% endfor %}
+            </ul>
+        </div>
         <div class="section">
             <h2>Ultimi Ascolti</h2>
             {% for track in recently_played %}
