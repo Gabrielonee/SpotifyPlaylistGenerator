@@ -93,6 +93,16 @@ class SpotifyMoodAnalyzer:
             return None
         else:
             return spotipy.Spotify(auth=token_info['access_token'])
+
+    def get_available_genres(self, sp_client=None):
+        """Ottiene i generi disponibili da Spotify"""
+        if not sp_client:
+            sp_client = self.sp
+        try:
+            return sp_client.recommendation_genre_seeds()['genres']
+        except Exception as e:
+            print(f"Errore nel recupero dei generi disponibili: {e}")
+            return ['pop']  #Fallback to common genre
     
     def get_user_data(self, sp_user):
         user_profile = sp_user.current_user()
@@ -187,7 +197,7 @@ class SpotifyMoodAnalyzer:
         
         target_features = self.mood_analyzer.emotion_mapping.get(
             dominant_emotion,
-            self.mood_analyzer.emotion_mapping['joy']  # fallback
+            self.mood_analyzer.emotion_mapping['joy']  #fallback
         )
         
         seeds = sorted(
@@ -205,12 +215,11 @@ class SpotifyMoodAnalyzer:
         if 'target_energy' in target_features:
             similarity += 1 - abs(features.get('energy', 0.5) - target_features['target_energy'])
         return similarity
-    
+
     def get_mood_recommendations(self, sp_client, user_input):
         if sp_client is None:
             raise Exception("Client Spotify non autenticato. Completa il flusso OAuth.")
             
-        
         emotions = self.mood_analyzer.analyze_text(user_input)
         print(f"Emozioni rilevate: {emotions}")
         audio_features = self._calculate_audio_features(emotions)
@@ -227,34 +236,92 @@ class SpotifyMoodAnalyzer:
             'love': ['pop', 'r-n-b', 'soul']
         }
         
+        #Avaliable genres
+        available_genres = self.get_available_genres(sp_client)
+        print(f"Generi disponibili: {available_genres}")
         
-        seed_genres = mood_to_genres.get(dominant_emotion.lower(), ['pop'])
+        preferred_genres = mood_to_genres.get(dominant_emotion.lower(), ['pop'])
+        seed_genres = [genre for genre in preferred_genres if genre in available_genres]
+        if not seed_genres and available_genres:
+            seed_genres = [available_genres[0]]
         
-        try:
-            recs = sp_client.recommendations(
-                seed_genres=seed_genres[:2], 
-                limit=20,
-                **audio_features
-            )
-            return recs.get('tracks', [])
-        except Exception as e:
-            print(f"Primo tentativo fallito: {e}")
+        print(f"Usando i generi seed: {seed_genres}")
+        recommendations = None
+        
+        #First strategy: genres
+        if seed_genres:
             try:
+                print(f"Tentativo con seed_genres: {seed_genres[:2]}")
                 recs = sp_client.recommendations(
-                    seed_genres=seed_genres[:2],
-                    limit=20
+                    seed_genres=seed_genres[:2], 
+                    limit=20,
+                    **audio_features
                 )
-                return recs.get('tracks', [])
-            except Exception as e2:
-                print(f"Secondo tentativo fallito: {e2}")
-                try:
-                    recs = sp_client.recommendations(
-                        seed_genres=['pop', 'rock'],
-                        limit=20
-                    )
-                    return recs.get('tracks', [])
-                except Exception as e3:
-                    raise Exception(f"Impossibile ottenere raccomandazioni: {e3}")
+                recommendations = recs.get('tracks', [])
+                if recommendations:
+                    return recommendations
+            except Exception as e:
+                print(f"Tentativo con seed_genres fallito: {e}")
+        
+        #Secon strategy: top tracks
+        try:
+            print("Tentativo con seed_tracks")
+            top_tracks = sp_client.current_user_top_tracks(limit=5)
+            if top_tracks and 'items' in top_tracks and top_tracks['items']:
+                seed_tracks = [track['id'] for track in top_tracks['items'][:2]]
+                print(f"Usando seed_tracks: {seed_tracks}")
+                recs = sp_client.recommendations(
+                    seed_tracks=seed_tracks,
+                    limit=20,
+                    **audio_features
+                )
+                recommendations = recs.get('tracks', [])
+                if recommendations:
+                    return recommendations
+        except Exception as e:
+            print(f"Tentativo con seed_tracks fallito: {e}")
+        
+        #Third strategy: top artist
+        try:
+            print("Tentativo con seed_artists")
+            top_artists = sp_client.current_user_top_artists(limit=5)
+            if top_artists and 'items' in top_artists and top_artists['items']:
+                seed_artists = [artist['id'] for artist in top_artists['items'][:2]]
+                print(f"Usando seed_artists: {seed_artists}")
+                recs = sp_client.recommendations(
+                    seed_artists=seed_artists,
+                    limit=20,
+                    **audio_features
+                )
+                recommendations = recs.get('tracks', [])
+                if recommendations:
+                    return recommendations
+        except Exception as e:
+            print(f"Tentativo con seed_artists fallito: {e}")
+        
+        #Fourth strategy: popular tracks
+        try:
+            print("Tentativo con ricerca di brani popolari")
+            search_terms = mood_to_genres.get(dominant_emotion.lower(), ['pop'])
+            for term in search_terms[:2]:
+                if term in available_genres:
+                    track_results = sp_client.search(q=f"genre:{term}", type='track', limit=20)
+                    if track_results and 'tracks' in track_results and 'items' in track_results['tracks']:
+                        recommendations = track_results['tracks']['items']
+                        if recommendations:
+                            return recommendations
+        except Exception as e:
+            print(f"Tentativo con ricerca brani fallito: {e}")
+        
+        #Strategy 5: public playlist
+        print("Usando il metodo fallback per ottenere tracce da playlist pubbliche")
+        fallback_tracks = self.get_fallback_tracks(sp_client, dominant_emotion)
+        if fallback_tracks:
+            return fallback_tracks
+        
+        #Nothing worked
+        raise Exception("Impossibile ottenere raccomandazioni dopo molteplici tentativi")
+    
     def _get_audio_features_with_retry(self, sp_client, track_ids, max_retries=3):
         """Ottieni le caratteristiche audio con retry in caso di errore"""
         for attempt in range(max_retries):
@@ -265,6 +332,7 @@ class SpotifyMoodAnalyzer:
                 if attempt == max_retries - 1:
                     return []
                 time.sleep(1)
+    
     def create_mood_playlist(self, sp_client, playlist_name, track_ids):
         if sp_client is None:
             raise Exception("Client Spotify non autenticato. Completa il flusso OAuth.")
@@ -285,3 +353,58 @@ class SpotifyMoodAnalyzer:
             for chunk in chunks:
                 sp_client.playlist_add_items(playlist['id'], chunk)
         return playlist['external_urls']['spotify']
+    
+    def get_fallback_tracks(self, sp_client, mood):
+        mood_to_search = {
+            'joy': ['happy', 'joy', 'festa', 'felicità'],
+            'sadness': ['sad', 'melancholy', 'tristezza', 'malinconia'],
+            'anger': ['angry', 'intense', 'rabbia', 'intense'],
+            'fear': ['calm', 'relaxing', 'rilassante', 'tranquillo'],
+            'optimism': ['motivational', 'upbeat', 'motivazione', 'ottimismo'],
+            'surprise': ['discover', 'new', 'scoperta', 'novità'],
+            'love': ['love', 'romantic', 'amore', 'romantico']
+        }
+    
+        search_terms = mood_to_search.get(mood.lower(), ['popular'])
+        
+        all_tracks = []
+        
+        for term in search_terms:
+            try:
+                print(f"Ricerca playlist con termine: {term}")
+                playlist_results = sp_client.search(q=term, type='playlist', limit=5)
+                
+                if not playlist_results or 'playlists' not in playlist_results or 'items' not in playlist_results['playlists']:
+                    print(f"Nessuna playlist trovata per il termine: {term}")
+                    continue
+                
+                import random
+                playlists = playlist_results['playlists']['items']
+                if not playlists:
+                    continue
+                    
+                random_playlist = random.choice(playlists)
+                playlist_id = random_playlist['id']
+                
+                print(f"Usando playlist: {random_playlist['name']} (ID: {playlist_id})")
+                
+                playlist_tracks = sp_client.playlist_tracks(playlist_id, limit=40)
+                
+                if not playlist_tracks or 'items' not in playlist_tracks:
+                    continue
+                    
+                for item in playlist_tracks['items']:
+                    if item and 'track' in item and item['track']:
+                        all_tracks.append(item['track'])
+                
+                if len(all_tracks) >= 30:
+                    break
+                    
+            except Exception as e:
+                print(f"Errore durante la ricerca di playlist per '{term}': {e}")
+        
+        if all_tracks:
+            import random
+            return random.sample(all_tracks, min(30, len(all_tracks)))
+        else:
+            return []
