@@ -222,10 +222,24 @@ class SpotifyMoodAnalyzer:
             
         emotions = self.mood_analyzer.analyze_text(user_input)
         print(f"Emozioni rilevate: {emotions}")
+        
+        # Introduciamo variabilità nei parametri audio calcolati
         audio_features = self._calculate_audio_features(emotions)
-        print(f"Caratteristiche audio: {audio_features}")
+        # Aggiungiamo randomicità per evitare risultati identici
+        import random
+        for key in audio_features:
+            if key.startswith('target_'):
+                if 'valence' in key or 'energy' in key or 'danceability' in key or 'acousticness' in key:
+                    # Aggiungiamo una piccola variazione casuale (± 0.1) ai parametri tra 0-1
+                    audio_features[key] = max(0, min(1, audio_features[key] + random.uniform(-0.1, 0.1)))
+                elif 'tempo' in key:
+                    # Aggiungiamo variazione al tempo (± 10 BPM)
+                    audio_features[key] = max(60, audio_features[key] + random.uniform(-10, 10))
+        
+        print(f"Caratteristiche audio con variabilità: {audio_features}")
         dominant_emotion = max(emotions, key=emotions.get)
         
+        # Resto del codice esistente per i generi...
         mood_to_genres = {
             'joy': ['pop', 'dance', 'happy'],
             'sadness': ['sad', 'acoustic', 'piano'],
@@ -236,7 +250,6 @@ class SpotifyMoodAnalyzer:
             'love': ['pop', 'r-n-b', 'soul']
         }
         
-        #Avaliable genres
         available_genres = self.get_available_genres(sp_client)
         print(f"Generi disponibili: {available_genres}")
         
@@ -245,10 +258,14 @@ class SpotifyMoodAnalyzer:
         if not seed_genres and available_genres:
             seed_genres = [available_genres[0]]
         
+        # Randomizziamo la selezione dei generi se ne abbiamo più di 2
+        if len(seed_genres) > 2:
+            seed_genres = random.sample(seed_genres, 2)
+        
         print(f"Usando i generi seed: {seed_genres}")
         recommendations = None
         
-        #First strategy: genres
+        # First strategy: genres
         if seed_genres:
             try:
                 print(f"Tentativo con seed_genres: {seed_genres[:2]}")
@@ -263,12 +280,14 @@ class SpotifyMoodAnalyzer:
             except Exception as e:
                 print(f"Tentativo con seed_genres fallito: {e}")
         
-        #Secon strategy: top tracks
+        # Second strategy: top tracks - modifichiamo per usare tracce casuali dalle top tracks
         try:
             print("Tentativo con seed_tracks")
-            top_tracks = sp_client.current_user_top_tracks(limit=5)
+            top_tracks = sp_client.current_user_top_tracks(limit=15)  # Aumentiamo il limite
             if top_tracks and 'items' in top_tracks and top_tracks['items']:
-                seed_tracks = [track['id'] for track in top_tracks['items'][:2]]
+                # Scegliamo 2 tracce casuali dalle top 15
+                track_selection = random.sample(top_tracks['items'], min(2, len(top_tracks['items'])))
+                seed_tracks = [track['id'] for track in track_selection]
                 print(f"Usando seed_tracks: {seed_tracks}")
                 recs = sp_client.recommendations(
                     seed_tracks=seed_tracks,
@@ -281,12 +300,14 @@ class SpotifyMoodAnalyzer:
         except Exception as e:
             print(f"Tentativo con seed_tracks fallito: {e}")
         
-        #Third strategy: top artist
+        # Third strategy: anche qui, usiamo artisti casuali dalle top
         try:
             print("Tentativo con seed_artists")
-            top_artists = sp_client.current_user_top_artists(limit=5)
+            top_artists = sp_client.current_user_top_artists(limit=15)
             if top_artists and 'items' in top_artists and top_artists['items']:
-                seed_artists = [artist['id'] for artist in top_artists['items'][:2]]
+                # Scegliamo 2 artisti casuali
+                artist_selection = random.sample(top_artists['items'], min(2, len(top_artists['items'])))
+                seed_artists = [artist['id'] for artist in artist_selection]
                 print(f"Usando seed_artists: {seed_artists}")
                 recs = sp_client.recommendations(
                     seed_artists=seed_artists,
@@ -356,46 +377,51 @@ class SpotifyMoodAnalyzer:
     
     def get_fallback_tracks(self, sp_client, mood):
         mood_to_search = {
-            'joy': ['happy', 'joy', 'festa', 'felicità'],
-            'sadness': ['sad', 'melancholy', 'tristezza', 'malinconia'],
-            'anger': ['angry', 'intense', 'rabbia', 'intense'],
-            'fear': ['calm', 'relaxing', 'rilassante', 'tranquillo'],
-            'optimism': ['motivational', 'upbeat', 'motivazione', 'ottimismo'],
-            'surprise': ['discover', 'new', 'scoperta', 'novità'],
-            'love': ['love', 'romantic', 'amore', 'romantico']
+            'joy': ['happy', 'joy', 'festa', 'felicità', 'upbeat', 'dance'],
+            'sadness': ['sad', 'melancholy', 'tristezza', 'malinconia', 'blue', 'nostalgia'],
+            'anger': ['angry', 'intense', 'rabbia', 'intense', 'power', 'energy'],
+            'fear': ['calm', 'relaxing', 'rilassante', 'tranquillo', 'ambient', 'peaceful'],
+            'optimism': ['motivational', 'upbeat', 'motivazione', 'ottimismo', 'inspiring', 'positive'],
+            'surprise': ['discover', 'new', 'scoperta', 'novità', 'unusual', 'unexpected'],
+            'love': ['love', 'romantic', 'amore', 'romantico', 'passion', 'sweet']
         }
-    
-        search_terms = mood_to_search.get(mood.lower(), ['popular'])
+
+        import random
+        
+        search_terms = mood_to_search.get(mood.lower(), ['popular', 'trending', 'hit'])
+        if len(search_terms) > 3:
+            search_terms = random.sample(search_terms, random.randint(2, 3))
         
         all_tracks = []
         
         for term in search_terms:
             try:
                 print(f"Ricerca playlist con termine: {term}")
-                playlist_results = sp_client.search(q=term, type='playlist', limit=5)
+                playlist_results = sp_client.search(q=term, type='playlist', limit=30) # Aumentiamo il limite
                 
                 if not playlist_results or 'playlists' not in playlist_results or 'items' not in playlist_results['playlists']:
                     print(f"Nessuna playlist trovata per il termine: {term}")
                     continue
                 
-                import random
                 playlists = playlist_results['playlists']['items']
                 if not playlists:
                     continue
                     
-                random_playlist = random.choice(playlists)
-                playlist_id = random_playlist['id']
+                selected_playlists = random.sample(playlists, min(2, len(playlists)))
                 
-                print(f"Usando playlist: {random_playlist['name']} (ID: {playlist_id})")
-                
-                playlist_tracks = sp_client.playlist_tracks(playlist_id, limit=40)
-                
-                if not playlist_tracks or 'items' not in playlist_tracks:
-                    continue
+                for random_playlist in selected_playlists:
+                    playlist_id = random_playlist['id']
                     
-                for item in playlist_tracks['items']:
-                    if item and 'track' in item and item['track']:
-                        all_tracks.append(item['track'])
+                    print(f"Usando playlist: {random_playlist['name']} (ID: {playlist_id})")
+                    
+                    playlist_tracks = sp_client.playlist_tracks(playlist_id, limit=20)
+                    
+                    if not playlist_tracks or 'items' not in playlist_tracks:
+                        continue
+                        
+                    for item in playlist_tracks['items']:
+                        if item and 'track' in item and item['track']:
+                            all_tracks.append(item['track'])
                 
                 if len(all_tracks) >= 30:
                     break
@@ -404,7 +430,7 @@ class SpotifyMoodAnalyzer:
                 print(f"Errore durante la ricerca di playlist per '{term}': {e}")
         
         if all_tracks:
-            import random
-            return random.sample(all_tracks, min(30, len(all_tracks)))
+            random.shuffle(all_tracks)
+            return all_tracks[:min(35, len(all_tracks))]
         else:
             return []
