@@ -5,16 +5,12 @@ import os
 
 app = Flask(__name__)
 
-
 client_id = os.getenv('SPOTIFY_CLIENT_ID')
 client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
 redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI')
-
 app.config['SESSION_COOKIE_NAME'] = 'mood_music_session'
 app.config['PERMANENT_SESSION_LIFETIME'] = 3600 
-
 mood_analyzer = SpotifyMoodAnalyzer(client_id, client_secret, redirect_uri)
-
 
 @app.route('/')
 def home():
@@ -163,3 +159,4 @@ def recommend():
     
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
+    
