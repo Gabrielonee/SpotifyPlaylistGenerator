@@ -241,23 +241,21 @@ class SpotifyMoodAnalyzer:
         emotions = self.mood_analyzer.analyze_text(user_input)
         print(f"Emozioni rilevate: {emotions}")
         
-        # Introduciamo variabilità nei parametri audio calcolati
         audio_features = self._calculate_audio_features(emotions)
-        # Aggiungiamo randomicità per evitare risultati identici
+        #Random to get new playlist each time
         import random
         for key in audio_features:
             if key.startswith('target_'):
                 if 'valence' in key or 'energy' in key or 'danceability' in key or 'acousticness' in key:
-                    # Aggiungiamo una piccola variazione casuale (± 0.1) ai parametri tra 0-1
+                    #Variation to parameter
                     audio_features[key] = max(0, min(1, audio_features[key] + random.uniform(-0.1, 0.1)))
                 elif 'tempo' in key:
-                    # Aggiungiamo variazione al tempo (± 10 BPM)
+                    #Variation to BPM
                     audio_features[key] = max(60, audio_features[key] + random.uniform(-10, 10))
         
         print(f"Caratteristiche audio con variabilità: {audio_features}")
         dominant_emotion = max(emotions, key=emotions.get)
         
-        # Resto del codice esistente per i generi...
         mood_to_genres = {
             'joy': ['pop', 'dance', 'happy'],
             'sadness': ['sad', 'acoustic', 'piano'],
@@ -276,7 +274,7 @@ class SpotifyMoodAnalyzer:
         if not seed_genres and available_genres:
             seed_genres = [available_genres[0]]
         
-        # Randomizziamo la selezione dei generi se ne abbiamo più di 2
+        #Randomize genres
         if len(seed_genres) > 2:
             seed_genres = random.sample(seed_genres, 2)
         
