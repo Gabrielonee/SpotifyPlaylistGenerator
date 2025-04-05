@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>La tua Playlist - Mood Music</title>
+  <title>Your Playlist!</title>
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -126,16 +126,16 @@
 <body>
   <div class="container">
     <div class="playlist-header">
-      <h1>🎵 La tua Playlist Personalizzata</h1>
-      <p>Abbiamo creato questa playlist basata sul tuo stato d'animo:</p>
+      <h1>Your personalized playlist!</h1>
+      <p>Playlist based on your humor!</p>
       <p class="user-input">"{{ user_input }}"</p>
       <a href="{{ playlist_url }}" target="_blank" class="playlist-link">
-        🎧 Apri su Spotify
+        Open in Spotify
       </a>
     </div>
 
     <div class="emotion-analysis">
-      <h2>Analisi del tuo stato d'animo:</h2>
+      <h2>Sentiment Analysis</h2>
       <div class="emotion-bars">
         {% for emotion, score in analysis.items() %}
         <div class="emotion-bar">
@@ -150,7 +150,7 @@
       </div>
     </div>
 
-    <h2 style="color: #1db954;">Brani selezionati per te:</h2>
+    <h2 style="color: #1db954;">Tracks selected:</h2>
     <div class="tracks-grid">
       {% for track in tracks %}
       <div class="track-card">
