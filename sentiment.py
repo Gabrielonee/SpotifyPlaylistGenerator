@@ -113,7 +113,6 @@ class SpotifyMoodAnalyzer:
             return spotipy.Spotify(auth=token_info['access_token'])
 
     def get_available_genres(self, sp_client=None):
-        """Ottiene i generi disponibili da Spotify"""
         if not sp_client:
             sp_client = self.sp
         try:
@@ -296,18 +295,18 @@ class SpotifyMoodAnalyzer:
             except Exception as e:
                 print(f"Tentativo con seed_genres fallito: {e}")
         
-        # Second strategy: top tracks - modifichiamo per usare tracce casuali dalle top tracks
+        # Second strategy: top tracks
         try:
             print("Tentativo con seed_tracks")
-            top_tracks = sp_client.current_user_top_tracks(limit=15)  # Aumentiamo il limite
+            top_tracks = sp_client.current_user_top_tracks(limit=35)
             if top_tracks and 'items' in top_tracks and top_tracks['items']:
                 # Scegliamo 2 tracce casuali dalle top 15
-                track_selection = random.sample(top_tracks['items'], min(2, len(top_tracks['items'])))
+                track_selection = random.sample(top_tracks['items'], min(5, len(top_tracks['items'])))
                 seed_tracks = [track['id'] for track in track_selection]
                 print(f"Usando seed_tracks: {seed_tracks}")
                 recs = sp_client.recommendations(
                     seed_tracks=seed_tracks,
-                    limit=20,
+                    limit=25,
                     **audio_features
                 )
                 recommendations = recs.get('tracks', [])
@@ -321,13 +320,12 @@ class SpotifyMoodAnalyzer:
             print("Tentativo con seed_artists")
             top_artists = sp_client.current_user_top_artists(limit=15)
             if top_artists and 'items' in top_artists and top_artists['items']:
-                # Scegliamo 2 artisti casuali
-                artist_selection = random.sample(top_artists['items'], min(2, len(top_artists['items'])))
+                artist_selection = random.sample(top_artists['items'], min(4, len(top_artists['items'])))
                 seed_artists = [artist['id'] for artist in artist_selection]
                 print(f"Usando seed_artists: {seed_artists}")
                 recs = sp_client.recommendations(
                     seed_artists=seed_artists,
-                    limit=20,
+                    limit=25,
                     **audio_features
                 )
                 recommendations = recs.get('tracks', [])
@@ -342,7 +340,7 @@ class SpotifyMoodAnalyzer:
             search_terms = mood_to_genres.get(dominant_emotion.lower(), ['pop'])
             for term in search_terms[:2]:
                 if term in available_genres:
-                    track_results = sp_client.search(q=f"genre:{term}", type='track', limit=20)
+                    track_results = sp_client.search(q=f"genre:{term}", type='track', limit=30)
                     if track_results and 'tracks' in track_results and 'items' in track_results['tracks']:
                         recommendations = track_results['tracks']['items']
                         if recommendations:
@@ -360,7 +358,6 @@ class SpotifyMoodAnalyzer:
         raise Exception("Impossibile ottenere raccomandazioni dopo molteplici tentativi")
     
     def _get_audio_features_with_retry(self, sp_client, track_ids, max_retries=3):
-        """Ottieni le caratteristiche audio con retry in caso di errore"""
         for attempt in range(max_retries):
             try:
                 return sp_client.audio_features(track_ids)
