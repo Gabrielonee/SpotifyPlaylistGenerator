@@ -1,99 +1,527 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spotify Recap</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        :root {
+            --spotify-green: #1DB954;
+            --spotify-black: #121212;
+            --spotify-dark-gray: #181818;
+            --spotify-light-gray: #333333;
+            --spotify-white: #FFFFFF;
+            --section-radius: 16px;
+            --card-radius: 12px;
+            --transition-speed: 0.3s;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-            background-color: #121212;
-            color: white;
+            font-family: 'Montserrat', 'Gotham', Arial, sans-serif;
+            background-color: var(--spotify-black);
+            color: var(--spotify-white);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-image: radial-gradient(circle at top right, rgba(29, 185, 84, 0.15), transparent 80%),
+                              radial-gradient(circle at bottom left, rgba(29, 185, 84, 0.1), transparent 70%);
+            background-attachment: fixed;
         }
-        h1, h2 {
-            color: #1DB954;
+        
+        .header {
+            position: relative;
+            padding: 2rem 0;
             text-align: center;
+            overflow: hidden;
         }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 180px;
+            background: linear-gradient(to bottom, rgba(29, 185, 84, 0.2), transparent);
+            z-index: -1;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .logo i {
+            color: var(--spotify-green);
+            font-size: 2.5rem;
+            margin-right: 0.8rem;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(120deg, var(--spotify-white), var(--spotify-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+        
         .container {
-            max-width: 800px;
-            margin: auto;
+            max-width: 900px;
+            margin: 0 auto 3rem;
+            padding: 0 1.5rem;
         }
+        
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            padding: 0.8rem 0;
+            background-color: rgba(18, 18, 18, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 0.5rem;
+        }
+        
+        .nav::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .nav-item {
+            padding: 0.5rem 1.2rem;
+            border-radius: 30px;
+            background-color: var(--spotify-dark-gray);
+            color: var(--spotify-white);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--spotify-green);
+            color: var(--spotify-black);
+            transform: translateY(-2px);
+        }
+        
         .section {
-            background-color: #181818;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            background-color: var(--spotify-dark-gray);
+            padding: 1.8rem;
+            border-radius: var(--section-radius);
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.8s ease;
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--spotify-green), transparent);
+            border-radius: var(--section-radius) var(--section-radius) 0 0;
+        }
+        
+        h2 {
+            color: var(--spotify-white);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        
+        h2 i {
+            color: var(--spotify-green);
+            margin-right: 0.8rem;
+            font-size: 1.6rem;
+        }
+        
+        .tracks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
         .track, .recent-track {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            background-color: #222;
+            padding: 1rem;
+            border-radius: var(--card-radius);
+            background-color: rgba(255, 255, 255, 0.05);
+            transition: all var(--transition-speed) ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
+        
+        .track:hover, .recent-track:hover {
+            transform: translateY(-5px);
+            background-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+        }
+        
         .track img, .recent-track img {
             width: 80px;
             height: 80px;
             border-radius: 8px;
-            margin-right: 15px;
+            margin-right: 1rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            object-fit: cover;
         }
+        
+        .track-info, .recent-track-info {
+            flex: 1;
+        }
+        
+        .track-name, .recent-track-name {
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
         .track a, .recent-track a {
-            color: #1DB954;
+            color: var(--spotify-white);
             text-decoration: none;
-            font-weight: bold;
+            transition: color var(--transition-speed) ease;
         }
+        
         .track a:hover, .recent-track a:hover {
-            text-decoration: underline;
+            color: var(--spotify-green);
+        }
+        
+        .track-artist, .recent-track-artist {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            margin-bottom: 0.2rem;
+        }
+        
+        .track-album {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .track-number {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.2rem;
+            font-weight: 800;
+            opacity: 0.2;
+        }
+        
+        .play-icon {
+            position: absolute;
+            right: 1rem;
+            bottom: 1rem;
+            width: 28px;
+            height: 28px;
+            background-color: var(--spotify-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all var(--transition-speed) ease;
+        }
+        
+        .track:hover .play-icon, .recent-track:hover .play-icon {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .chart-item {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: var(--card-radius);
+            display: flex;
+            align-items: center;
+            transition: all var(--transition-speed) ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .chart-item:hover {
+            transform: translateY(-5px);
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+        
+        .chart-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.15);
+            margin-right: 1rem;
+            min-width: 30px;
+        }
+        
+        .chart-content {
+            flex: 1;
+        }
+        
+        .chart-title {
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        
+        .chart-meta {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .chart-icon {
+            margin-left: 1rem;
+            opacity: 0.5;
+            transition: all var(--transition-speed) ease;
+        }
+        
+        .chart-item:hover .chart-icon {
+            opacity: 1;
+            color: var(--spotify-green);
+        }
+        
+        .no-bullets {
+            list-style: none;
+        }
+        
+        .timestamp {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 0.2rem;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+        
+        .footer a {
+            color: var(--spotify-green);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .subtitle {
+                font-size: 1rem;
+            }
+            
+            .tracks-grid, .chart-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .section {
+                padding: 1.2rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Spotify Recap di {{ user }}</h1>
-
-        <div class="section">
-            <h2>Top Brani</h2>
-            {% for track in top_tracks %}
-            <div class="track">
-                <img src="{{ track.image_url }}" alt="Copertina di {{ track.name }}">
-                <div>
-                    <a href="{{ track.url }}" target="_blank">{{ track.name }}</a> - {{ track.artist }} ({{ track.album }})
-                </div>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <i class="fab fa-spotify"></i>
+                <h1>Spotify Recap</h1>
             </div>
-            {% endfor %}
+            <p class="subtitle">Here's a personalized summary of your musical journey, {{ user }}</p>
         </div>
-
-        <div class="section">
-            <h2>Top Artisti</h2>
-            <ul>
-                {% for artist in top_artists %}
-                    <li>{{ artist }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        <div class="section">
-            <h2>Top Generi Musicali</h2>
-            <ul>
-                {% for genre in top_genres %}
-                    <li>{{ genre }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        <div class="section">
-            <h2>Ultimi Ascolti</h2>
-            {% for track in recently_played %}
-            <div class="recent-track">
-                <img src="{{ track.image }}" alt="Copertina">
-                <div>
-                    <a href="{{ track.url }}" target="_blank">{{ track.name }}</a> - {{ track.artist }}
-                </div>
-            </div>
-            {% endfor %}
+    </header>
+    
+    <div class="nav-container">
+        <div class="nav">
+            <div class="nav-item active" onclick="scrollToSection('top-tracks')">Top Tracks</div>
+            <div class="nav-item" onclick="scrollToSection('top-artists')">Top Artists</div>
+            <div class="nav-item" onclick="scrollToSection('top-genres')">Favorite Genres</div>
+            <div class="nav-item" onclick="scrollToSection('recent-tracks')">Recent Listens</div>
         </div>
     </div>
+
+    <div class="container">
+        <section id="top-tracks" class="section">
+            <h2><i class="fas fa-crown"></i> Your Top Tracks</h2>
+            <div class="tracks-grid">
+                {% for track in top_tracks %}
+                <div class="track">
+                    <div class="track-number">{{ loop.index }}</div>
+                    <img src="{{ track.image_url }}" alt="Cover of {{ track.name }}">
+                    <div class="track-info">
+                        <div class="track-name">
+                            <a href="{{ track.url }}" target="_blank">{{ track.name }}</a>
+                        </div>
+                        <div class="track-artist">{{ track.artist }}</div>
+                        <div class="track-album">{{ track.album }}</div>
+                    </div>
+                    <a href="{{ track.url }}" target="_blank" class="play-icon">
+                        <i class="fas fa-play" style="color: #000;"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section id="top-artists" class="section">
+            <h2><i class="fas fa-microphone-alt"></i> Your Favorite Artists</h2>
+            <div class="chart-container">
+                {% for artist in top_artists %}
+                <div class="chart-item">
+                    <div class="chart-number">{{ loop.index }}</div>
+                    <div class="chart-content">
+                        <div class="chart-title">{{ artist }}</div>
+                        <div class="chart-meta">Artist</div>
+                    </div>
+                    <div class="chart-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        
+        <section id="top-genres" class="section">
+            <h2><i class="fas fa-guitar"></i> Your Favorite Genres</h2>
+            <div class="chart-container">
+                {% for genre in top_genres %}
+                <div class="chart-item">
+                    <div class="chart-number">{{ loop.index }}</div>
+                    <div class="chart-content">
+                        <div class="chart-title">{{ genre }}</div>
+                        <div class="chart-meta">Music Genre</div>
+                    </div>
+                    <div class="chart-icon">
+                        <i class="fas fa-compact-disc"></i>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        
+        <section id="recent-tracks" class="section">
+            <h2><i class="fas fa-history"></i> Your Recent Listens</h2>
+            <div class="tracks-grid">
+                {% for track in recently_played %}
+                <div class="recent-track">
+                    <img src="{{ track.image }}" alt="Cover of {{ track.name }}">
+                    <div class="recent-track-info">
+                        <div class="recent-track-name">
+                            <a href="{{ track.url }}" target="_blank">{{ track.name }}</a>
+                        </div>
+                        <div class="recent-track-artist">{{ track.artist }}</div>
+                        <div class="timestamp">
+                            <i class="far fa-clock"></i> Recently played
+                        </div>
+                    </div>
+                    <a href="{{ track.url }}" target="_blank" class="play-icon">
+                        <i class="fas fa-play" style="color: #000;"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+    
+    <footer class="footer">
+        <p>Powered by <a href="#" target="_blank">Mood Music</a> &copy; {{ current_year }}</p>
+    </footer>
+
+    <script>
+        // Function to scroll to section
+        function scrollToSection(sectionId) {
+            document.getElementById(sectionId).scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+            
+            // Update active nav items
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Find and select the corresponding nav element
+            const clickedNav = Array.from(navItems).find(item => 
+                item.getAttribute('onclick').includes(sectionId)
+            );
+            
+            if (clickedNav) {
+                clickedNav.classList.add('active');
+            }
+        }
+        
+        // Animation of sections on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.section');
+            let delay = 0;
+            
+            sections.forEach(section => {
+                section.style.opacity = '0';
+                section.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    section.style.transition = 'opacity 0.8s ease, transform 0.8s ease';
+                    section.style.opacity = '1';
+                    section.style.transform = 'translateY(0)';
+                }, delay);
+                
+                delay += 150;
+            });
+        });
+    </script>
 </body>
 </html>
