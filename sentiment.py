@@ -4,6 +4,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 import os
 from dotenv import load_dotenv
+from deep_translator import GoogleTranslator
 
 # sentiment detection
 from transformers import pipeline
@@ -64,6 +65,23 @@ class SpotifyMoodAnalyzer:
     
         self.mood_analyzer = MoodAnalyzer() 
 
+    def translate_to_english(self, text):
+        try:
+            return GoogleTranslator(source='auto', target='en').translate(text)
+        except Exception as e:
+            print(f"Errore nella traduzione: {e}")
+            return text
+
+
+    def get_sentiment(self, prompt):
+        # Traduci il prompt prima dell'analisi
+        prompt = self.translate_to_english(prompt)
+        
+        # Continua con il processo esistente
+        sentiment_score = self.analyze_sentiment(prompt)
+        sentiment_label = self.label_sentiment(sentiment_score)
+        return sentiment_label
+    
     def analyze_text(self, user_input):
         return self.mood_analyzer.analyze_text(user_input)
 
