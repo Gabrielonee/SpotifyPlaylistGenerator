@@ -300,8 +300,8 @@ class SpotifyMoodAnalyzer:
             print("Tentativo con seed_tracks")
             top_tracks = sp_client.current_user_top_tracks(limit=35)
             if top_tracks and 'items' in top_tracks and top_tracks['items']:
-                # Scegliamo 2 tracce casuali dalle top 15
-                track_selection = random.sample(top_tracks['items'], min(5, len(top_tracks['items'])))
+                
+                track_selection = random.sample(top_tracks['items'], min(4, len(top_tracks['items'])))
                 seed_tracks = [track['id'] for track in track_selection]
                 print(f"Usando seed_tracks: {seed_tracks}")
                 recs = sp_client.recommendations(
@@ -315,12 +315,12 @@ class SpotifyMoodAnalyzer:
         except Exception as e:
             print(f"Tentativo con seed_tracks fallito: {e}")
         
-        # Third strategy: anche qui, usiamo artisti casuali dalle top
+        # Third strategy artists
         try:
             print("Tentativo con seed_artists")
-            top_artists = sp_client.current_user_top_artists(limit=15)
+            top_artists = sp_client.current_user_top_artists(limit=25)
             if top_artists and 'items' in top_artists and top_artists['items']:
-                artist_selection = random.sample(top_artists['items'], min(4, len(top_artists['items'])))
+                artist_selection = random.sample(top_artists['items'], min(2, len(top_artists['items'])))
                 seed_artists = [artist['id'] for artist in artist_selection]
                 print(f"Usando seed_artists: {seed_artists}")
                 recs = sp_client.recommendations(
@@ -410,7 +410,7 @@ class SpotifyMoodAnalyzer:
         for term in search_terms:
             try:
                 print(f"Ricerca playlist con termine: {term}")
-                playlist_results = sp_client.search(q=term, type='playlist', limit=30) # Aumentiamo il limite
+                playlist_results = sp_client.search(q=term, type='playlist', limit=25) 
                 
                 if not playlist_results or 'playlists' not in playlist_results or 'items' not in playlist_results['playlists']:
                     print(f"Nessuna playlist trovata per il termine: {term}")
@@ -420,14 +420,14 @@ class SpotifyMoodAnalyzer:
                 if not playlists:
                     continue
                     
-                selected_playlists = random.sample(playlists, min(2, len(playlists)))
+                selected_playlists = random.sample(playlists, min(4, len(playlists)))
                 
                 for random_playlist in selected_playlists:
                     playlist_id = random_playlist['id']
                     
                     print(f"Usando playlist: {random_playlist['name']} (ID: {playlist_id})")
                     
-                    playlist_tracks = sp_client.playlist_tracks(playlist_id, limit=20)
+                    playlist_tracks = sp_client.playlist_tracks(playlist_id, limit=25)
                     
                     if not playlist_tracks or 'items' not in playlist_tracks:
                         continue
@@ -444,6 +444,6 @@ class SpotifyMoodAnalyzer:
         
         if all_tracks:
             random.shuffle(all_tracks)
-            return all_tracks[:min(35, len(all_tracks))]
+            return all_tracks[:min(30, len(all_tracks))]
         else:
             return []
