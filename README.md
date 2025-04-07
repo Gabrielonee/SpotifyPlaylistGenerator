@@ -107,11 +107,6 @@ SpotifyPlaylistGenerator/
 │   ├── user_recap.html   # User profile overview
 │   └── recommendations.html  # Displays recommendations
 ```
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Acknowledgements
 
 - [Spotify Web API](https://developer.spotify.com/documentation/web-api/)
