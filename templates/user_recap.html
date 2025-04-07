@@ -284,23 +284,22 @@
             gap: 1.5rem;
         }
         
-        .chart-item {
+        /* Updated artist item styling */
+        .chart-item, .artist-item {
             background-color: rgba(255, 255, 255, 0.05);
             padding: 1rem;
             border-radius: var(--card-radius);
-            display: flex;
-            align-items: center;
             transition: all var(--transition-speed) ease;
             cursor: pointer;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
         
-        .chart-item:hover {
+        .chart-item:hover, .artist-item:hover {
             transform: translateY(-5px);
             background-color: rgba(255, 255, 255, 0.08);
         }
         
-        .chart-number {
+        .chart-number, .artist-number {
             font-size: 1.8rem;
             font-weight: 800;
             color: rgba(255, 255, 255, 0.15);
@@ -312,12 +311,12 @@
             flex: 1;
         }
         
-        .chart-title {
+        .chart-title, .artist-name {
             font-weight: 700;
             margin-bottom: 0.2rem;
         }
         
-        .chart-meta {
+        .chart-meta, .artist-type {
             font-size: 0.85rem;
             color: rgba(255, 255, 255, 0.6);
         }
@@ -330,6 +329,36 @@
         
         .chart-item:hover .chart-icon {
             opacity: 1;
+            color: var(--spotify-green);
+        }
+        
+        /* Artist specific styling */
+        .artist-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .artist-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 1rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--spotify-green);
+        }
+        
+        .artist-info {
+            flex: 1;
+        }
+        
+        .artist-link {
+            color: var(--spotify-white);
+            text-decoration: none;
+            transition: color var(--transition-speed) ease;
+        }
+        
+        .artist-link:hover {
             color: var(--spotify-green);
         }
         
@@ -370,6 +399,11 @@
             
             .section {
                 padding: 1.2rem;
+            }
+            
+            .artist-image {
+                width: 50px;
+                height: 50px;
             }
         }
     </style>
@@ -421,11 +455,14 @@
             <h2><i class="fas fa-microphone-alt"></i> Your Favorite Artists</h2>
             <div class="chart-container">
                 {% for artist in top_artists %}
-                <div class="chart-item">
-                    <div class="chart-number">{{ loop.index }}</div>
-                    <div class="chart-content">
-                        <div class="chart-title">{{ artist }}</div>
-                        <div class="chart-meta">Artist</div>
+                <div class="artist-item">
+                    <div class="artist-number">{{ loop.index }}</div>
+                    <img src="{{ artist.image_url }}" alt="{{ artist.name }}" class="artist-image">
+                    <div class="artist-info">
+                        <div class="artist-name">
+                            <a href="{{ artist.url }}" target="_blank" class="artist-link">{{ artist.name }}</a>
+                        </div>
+                        <div class="artist-type">Artist</div>
                     </div>
                     <div class="chart-icon">
                         <i class="fas fa-music"></i>
