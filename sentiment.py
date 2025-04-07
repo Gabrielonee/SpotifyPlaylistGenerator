@@ -5,6 +5,8 @@ from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
 import os
 from dotenv import load_dotenv
 from deep_translator import GoogleTranslator
+import random
+import datetime
 
 # sentiment detection
 from transformers import pipeline
@@ -63,7 +65,14 @@ class SpotifyMoodAnalyzer:
             requests_timeout=20
         )
     
-        self.mood_analyzer = MoodAnalyzer() 
+        self.mood_analyzer = MoodAnalyzer()
+        
+        # Cache per tracciare le tracce già consigliate
+        self.recommended_tracks_cache = set()
+        # Tempo di scadenza della cache in giorni
+        self.cache_expiry_days = 7
+        # Timestamp dell'ultimo reset della cache
+        self.last_cache_reset = datetime.datetime.now()
 
     def translate_to_english(self, text):
         try:
@@ -72,12 +81,9 @@ class SpotifyMoodAnalyzer:
             print(f"Errore nella traduzione: {e}")
             return text
 
-
     def get_sentiment(self, prompt):
-        # Traduci il prompt prima dell'analisi
+        #Translate to english
         prompt = self.translate_to_english(prompt)
-        
-        # Continua con il processo esistente
         sentiment_score = self.analyze_sentiment(prompt)
         sentiment_label = self.label_sentiment(sentiment_score)
         return sentiment_label
@@ -165,11 +171,25 @@ class SpotifyMoodAnalyzer:
                 for param, value in self.mood_analyzer.emotion_mapping[emotion].items():
                     features[param] += value * weight
         
-        features['target_valence'] = float(np.clip(features['target_valence'], 0, 1))
-        features['target_energy'] = float(np.clip(features['target_energy'], 0, 1))
-        features['target_danceability'] = float(np.clip(features['target_danceability'], 0, 1))
-        features['target_acousticness'] = float(features['target_acousticness'])
-        features['target_tempo'] = float(features['target_tempo'])
+        
+        #More diversity
+        for key in features:
+            if key.startswith('target_'):
+                if 'valence' in key or 'energy' in key or 'danceability' in key or 'acousticness' in key:
+                    features[key] = max(0, min(1, features[key] + random.uniform(-0.2, 0.2)))
+                elif 'tempo' in key:
+                    #More BPM diversity
+                    features[key] = max(60, features[key] + random.uniform(-20, 20))
+        
+        additional_params = {
+            'target_instrumentalness': random.uniform(0, 0.8),
+            'target_liveness': random.uniform(0, 0.8),
+            'min_popularity': random.randint(0, 40)  #Less popular tracks
+        }
+        
+        features.update(additional_params)
+        
+        print(f"Caratteristiche audio con variabilità aumentata: {features}")
         
         return features
 
@@ -217,11 +237,18 @@ class SpotifyMoodAnalyzer:
             self.mood_analyzer.emotion_mapping['joy']  #fallback
         )
         
-        seeds = sorted(
+        #We select 20 similar and 10 random
+        top_20_similar = sorted(
             valid_tracks,
             key=lambda x: self._track_similarity(x, target_features),
             reverse=True
-        )[:10]
+        )[:20]
+        
+        if len(top_20_similar) > 10:
+            seeds = random.sample(top_20_similar, 10)
+        else:
+            seeds = top_20_similar
+            
         return seeds
 
     def _track_similarity(self, track, target_features):
@@ -232,6 +259,45 @@ class SpotifyMoodAnalyzer:
         if 'target_energy' in target_features:
             similarity += 1 - abs(features.get('energy', 0.5) - target_features['target_energy'])
         return similarity
+        
+    def _check_cache_expiry(self):
+        
+        now = datetime.datetime.now()
+        days_passed = (now - self.last_cache_reset).days
+        
+        if days_passed >= self.cache_expiry_days:
+            print(f"Reset della cache dopo {days_passed} giorni")
+            self.recommended_tracks_cache = set()
+            self.last_cache_reset = now
+            return True
+        return False
+
+    def _filter_already_recommended(self, tracks):
+        #Reset cache?
+        self._check_cache_expiry()
+        
+        new_tracks = []
+        for track in tracks:
+            track_id = track.get('id')
+            if track_id and track_id not in self.recommended_tracks_cache:
+                new_tracks.append(track)
+                #Add to cache
+                self.recommended_tracks_cache.add(track_id)
+        
+        #If too filtered
+        if len(new_tracks) < len(tracks) * 0.3 and len(tracks) > 0:
+            print("Troppe tracce filtrate, aggiungendo alcune tracce già consigliate")
+            already_recommended = [t for t in tracks if t.get('id') in self.recommended_tracks_cache]
+            if already_recommended:
+                #Max 30% tracks already recommended
+                num_to_add = min(len(already_recommended), int(len(tracks) * 0.3))
+                new_tracks.extend(random.sample(already_recommended, num_to_add))
+        
+        if new_tracks:
+            return new_tracks
+        else:
+            print("Tutte le tracce sono già state consigliate, restituendo le tracce originali")
+            return tracks
 
     def get_mood_recommendations(self, sp_client, user_input):
         if sp_client is None:
@@ -241,28 +307,16 @@ class SpotifyMoodAnalyzer:
         print(f"Emozioni rilevate: {emotions}")
         
         audio_features = self._calculate_audio_features(emotions)
-        #Random to get new playlist each time
-        import random
-        for key in audio_features:
-            if key.startswith('target_'):
-                if 'valence' in key or 'energy' in key or 'danceability' in key or 'acousticness' in key:
-                    #Variation to parameter
-                    audio_features[key] = max(0, min(1, audio_features[key] + random.uniform(-0.1, 0.1)))
-                elif 'tempo' in key:
-                    #Variation to BPM
-                    audio_features[key] = max(60, audio_features[key] + random.uniform(-10, 10))
         
-        print(f"Caratteristiche audio con variabilità: {audio_features}")
         dominant_emotion = max(emotions, key=emotions.get)
-        
         mood_to_genres = {
-            'joy': ['pop', 'dance', 'happy'],
-            'sadness': ['sad', 'acoustic', 'piano'],
-            'anger': ['rock', 'metal', 'intense'],
-            'fear': ['ambient', 'instrumental'],
-            'optimism': ['pop', 'indie', 'upbeat'],
-            'surprise': ['electronic', 'experimental'],
-            'love': ['pop', 'r-n-b', 'soul']
+            'joy': ['pop', 'dance', 'happy', 'disco', 'tropical', 'edm', 'funk', 'party'],
+            'sadness': ['sad', 'acoustic', 'piano', 'indie', 'folk', 'ambient', 'chill', 'indie-pop'],
+            'anger': ['rock', 'metal', 'intense', 'punk', 'hardcore', 'grunge', 'alt-rock', 'industrial'],
+            'fear': ['ambient', 'instrumental', 'classical', 'cinematic', 'soundtracks', 'atmospheric'],
+            'optimism': ['pop', 'indie', 'upbeat', 'folk', 'gospel', 'soul', 'indie-pop', 'alt-rock'],
+            'surprise': ['electronic', 'experimental', 'alternative', 'new-age', 'jazz', 'fusion', 'world-music'],
+            'love': ['pop', 'r-n-b', 'soul', 'jazz', 'acoustic', 'singer-songwriter', 'indie', 'ballad']
         }
         
         available_genres = self.get_available_genres(sp_client)
@@ -270,89 +324,96 @@ class SpotifyMoodAnalyzer:
         
         preferred_genres = mood_to_genres.get(dominant_emotion.lower(), ['pop'])
         seed_genres = [genre for genre in preferred_genres if genre in available_genres]
-        if not seed_genres and available_genres:
-            seed_genres = [available_genres[0]]
-        
-        #Randomize genres
-        if len(seed_genres) > 2:
-            seed_genres = random.sample(seed_genres, 2)
+
+        if len(seed_genres) > 1:
+            seed_count = random.randint(1, min(3, len(seed_genres)))
+            seed_genres = random.sample(seed_genres, seed_count)
         
         print(f"Usando i generi seed: {seed_genres}")
         recommendations = None
         
-        # First strategy: genres
-        if seed_genres:
+        strategies = ['genres', 'tracks', 'artists', 'search', 'fallback']
+        random.shuffle(strategies)
+        
+        for strategy in strategies:
             try:
-                print(f"Tentativo con seed_genres: {seed_genres[:2]}")
-                recs = sp_client.recommendations(
-                    seed_genres=seed_genres[:2], 
-                    limit=20,
-                    **audio_features
-                )
-                recommendations = recs.get('tracks', [])
-                if recommendations:
-                    return recommendations
-            except Exception as e:
-                print(f"Tentativo con seed_genres fallito: {e}")
-        
-        # Second strategy: top tracks
-        try:
-            print("Tentativo con seed_tracks")
-            top_tracks = sp_client.current_user_top_tracks(limit=35)
-            if top_tracks and 'items' in top_tracks and top_tracks['items']:
+                if strategy == 'genres' and seed_genres:
+                    print(f"Tentativo con seed_genres: {seed_genres}")
+                    recs = sp_client.recommendations(
+                        seed_genres=seed_genres, 
+                        limit=30,  #More variety
+                        **audio_features
+                    )
+                    recommendations = recs.get('tracks', [])
+                    
+                elif strategy == 'tracks':
+                    print("Tentativo con seed_tracks")
+                    time_ranges = ['short_term', 'medium_term', 'long_term']
+                    random.shuffle(time_ranges)
+                    selected_range = time_ranges[0]
+                    
+                    top_tracks = sp_client.current_user_top_tracks(time_range=selected_range, limit=50)
+                    if top_tracks and 'items' in top_tracks and top_tracks['items']:
+                        track_selection = random.sample(top_tracks['items'], min(4, len(top_tracks['items'])))
+                        seed_tracks = [track['id'] for track in track_selection]
+                        print(f"Usando seed_tracks da {selected_range}: {seed_tracks}")
+                        recs = sp_client.recommendations(
+                            seed_tracks=seed_tracks,
+                            limit=30,
+                            **audio_features
+                        )
+                        recommendations = recs.get('tracks', [])
                 
-                track_selection = random.sample(top_tracks['items'], min(4, len(top_tracks['items'])))
-                seed_tracks = [track['id'] for track in track_selection]
-                print(f"Usando seed_tracks: {seed_tracks}")
-                recs = sp_client.recommendations(
-                    seed_tracks=seed_tracks,
-                    limit=25,
-                    **audio_features
-                )
-                recommendations = recs.get('tracks', [])
+                elif strategy == 'artists':
+                    print("Tentativo con seed_artists")
+                    time_ranges = ['short_term', 'medium_term', 'long_term']
+                    random.shuffle(time_ranges)
+                    selected_range = time_ranges[0]
+                    
+                    top_artists = sp_client.current_user_top_artists(time_range=selected_range, limit=50)
+                    if top_artists and 'items' in top_artists and top_artists['items']:
+                        artist_selection = random.sample(top_artists['items'], min(5, len(top_artists['items'])))
+                        seed_artists = [artist['id'] for artist in artist_selection]
+                        print(f"Usando seed_artists da {selected_range}: {seed_artists}")
+                        recs = sp_client.recommendations(
+                            seed_artists=seed_artists,
+                            limit=40,
+                            **audio_features
+                        )
+                        recommendations = recs.get('tracks', [])
+                
+                elif strategy == 'search':
+                    print("Tentativo con ricerca di brani basati sull'emozione")
+                    search_terms = mood_to_genres.get(dominant_emotion.lower(), ['pop'])
+                    if len(search_terms) > 2:
+                        search_terms = random.sample(search_terms, 2)
+                    decades = ['60s', '70s', '80s', '90s', '2000s', '2010s', '2020s']
+                    decade = random.choice(decades)
+                    search_terms.append(decade)
+                    
+                    for term in search_terms:
+                        track_results = sp_client.search(q=term, type='track', limit=35)
+                        if track_results and 'tracks' in track_results and 'items' in track_results['tracks']:
+                            recommendations = track_results['tracks']['items']
+                            if recommendations:
+                                break
+                
+                elif strategy == 'fallback':
+                    print("Usando il metodo fallback per ottenere tracce da playlist pubbliche")
+                    fallback_tracks = self.get_fallback_tracks(sp_client, dominant_emotion)
+                    if fallback_tracks:
+                        recommendations = fallback_tracks
+                
                 if recommendations:
-                    return recommendations
-        except Exception as e:
-            print(f"Tentativo con seed_tracks fallito: {e}")
-        
-        # Third strategy artists
-        try:
-            print("Tentativo con seed_artists")
-            top_artists = sp_client.current_user_top_artists(limit=25)
-            if top_artists and 'items' in top_artists and top_artists['items']:
-                artist_selection = random.sample(top_artists['items'], min(2, len(top_artists['items'])))
-                seed_artists = [artist['id'] for artist in artist_selection]
-                print(f"Usando seed_artists: {seed_artists}")
-                recs = sp_client.recommendations(
-                    seed_artists=seed_artists,
-                    limit=25,
-                    **audio_features
-                )
-                recommendations = recs.get('tracks', [])
-                if recommendations:
-                    return recommendations
-        except Exception as e:
-            print(f"Tentativo con seed_artists fallito: {e}")
-        
-        #Fourth strategy: popular tracks
-        try:
-            print("Tentativo con ricerca di brani popolari")
-            search_terms = mood_to_genres.get(dominant_emotion.lower(), ['pop'])
-            for term in search_terms[:2]:
-                if term in available_genres:
-                    track_results = sp_client.search(q=f"genre:{term}", type='track', limit=30)
-                    if track_results and 'tracks' in track_results and 'items' in track_results['tracks']:
-                        recommendations = track_results['tracks']['items']
-                        if recommendations:
-                            return recommendations
-        except Exception as e:
-            print(f"Tentativo con ricerca brani fallito: {e}")
-        
-        #Strategy 5: public playlist
-        print("Usando il metodo fallback per ottenere tracce da playlist pubbliche")
-        fallback_tracks = self.get_fallback_tracks(sp_client, dominant_emotion)
-        if fallback_tracks:
-            return fallback_tracks
+                    print(f"Trovate {len(recommendations)} raccomandazioni con strategia {strategy}")
+                    filtered_recommendations = self._filter_already_recommended(recommendations)
+                    if filtered_recommendations:
+                        random.shuffle(filtered_recommendations)
+                        return filtered_recommendations
+            
+            except Exception as e:
+                print(f"Tentativo con strategia {strategy} fallito: {e}")
+                continue
         
         #Nothing worked
         raise Exception("Impossibile ottenere raccomandazioni dopo molteplici tentativi")
@@ -371,16 +432,17 @@ class SpotifyMoodAnalyzer:
         if sp_client is None:
             raise Exception("Client Spotify non autenticato. Completa il flusso OAuth.")
             
-        
         user_id = sp_client.current_user()['id']
+        
+        timestamp = datetime.datetime.now().strftime("%d-%m %H:%M")
+        playlist_name = f"{playlist_name} [{timestamp}]"
         
         playlist = sp_client.user_playlist_create(
             user=user_id,
             name=playlist_name,
             public=False,
-            description="Playlist generata in base al tuo stato d'animo"
+            description=f"Playlist generata in base al tuo stato d'animo il {timestamp}"
         )
-        
         
         if track_ids:
             chunks = [track_ids[i:i+100] for i in range(0, len(track_ids), 100)]
@@ -390,27 +452,27 @@ class SpotifyMoodAnalyzer:
     
     def get_fallback_tracks(self, sp_client, mood):
         mood_to_search = {
-            'joy': ['happy', 'joy', 'festa', 'felicità', 'upbeat', 'dance'],
-            'sadness': ['sad', 'melancholy', 'tristezza', 'malinconia', 'blue', 'nostalgia'],
-            'anger': ['angry', 'intense', 'rabbia', 'intense', 'power', 'energy'],
-            'fear': ['calm', 'relaxing', 'rilassante', 'tranquillo', 'ambient', 'peaceful'],
-            'optimism': ['motivational', 'upbeat', 'motivazione', 'ottimismo', 'inspiring', 'positive'],
-            'surprise': ['discover', 'new', 'scoperta', 'novità', 'unusual', 'unexpected'],
-            'love': ['love', 'romantic', 'amore', 'romantico', 'passion', 'sweet']
+            'joy': ['happy', 'joy', 'festa', 'felicità', 'upbeat', 'dance', 'celebration', 'energetic', 'cheerful', 'ecstatic'],
+            'sadness': ['sad', 'melancholy', 'tristezza', 'malinconia', 'blue', 'nostalgia', 'heartbreak', 'sorrow', 'wistful', 'reflective'],
+            'anger': ['angry', 'intense', 'rabbia', 'intense', 'power', 'energy', 'furious', 'rage', 'aggressive', 'fierce'],
+            'fear': ['calm', 'relaxing', 'rilassante', 'tranquillo', 'ambient', 'peaceful', 'soothing', 'serene', 'meditative', 'quiet'],
+            'optimism': ['motivational', 'upbeat', 'motivazione', 'ottimismo', 'inspiring', 'positive', 'hopeful', 'uplifting', 'bright', 'encouraging'],
+            'surprise': ['discover', 'new', 'scoperta', 'novità', 'unusual', 'unexpected', 'exciting', 'different', 'unique', 'experimental'],
+            'love': ['love', 'romantic', 'amore', 'romantico', 'passion', 'sweet', 'affection', 'tender', 'devotion', 'intimate']
         }
-
-        import random
         
         search_terms = mood_to_search.get(mood.lower(), ['popular', 'trending', 'hit'])
+        
+        
         if len(search_terms) > 3:
-            search_terms = random.sample(search_terms, random.randint(2, 3))
+            search_terms = random.sample(search_terms, random.randint(2, 4))
         
         all_tracks = []
         
         for term in search_terms:
             try:
                 print(f"Ricerca playlist con termine: {term}")
-                playlist_results = sp_client.search(q=term, type='playlist', limit=25) 
+                playlist_results = sp_client.search(q=term, type='playlist', limit=50)  #Play with LIMIT
                 
                 if not playlist_results or 'playlists' not in playlist_results or 'items' not in playlist_results['playlists']:
                     print(f"Nessuna playlist trovata per il termine: {term}")
@@ -419,15 +481,25 @@ class SpotifyMoodAnalyzer:
                 playlists = playlist_results['playlists']['items']
                 if not playlists:
                     continue
-                    
-                selected_playlists = random.sample(playlists, min(4, len(playlists)))
+            
+                selected_playlists = random.sample(playlists, min(10, len(playlists)))
                 
                 for random_playlist in selected_playlists:
                     playlist_id = random_playlist['id']
                     
                     print(f"Usando playlist: {random_playlist['name']} (ID: {playlist_id})")
                     
-                    playlist_tracks = sp_client.playlist_tracks(playlist_id, limit=25)
+                    playlist_info = sp_client.playlist(playlist_id)
+                    if 'tracks' in playlist_info and 'total' in playlist_info['tracks']:
+                        total_tracks = playlist_info['tracks']['total']
+                        if total_tracks > 50:
+                            offset = random.randint(0, min(total_tracks - 25, 75))
+                        else:
+                            offset = 0
+                    else:
+                        offset = 0
+                    
+                    playlist_tracks = sp_client.playlist_tracks(playlist_id, limit=30, offset=offset)
                     
                     if not playlist_tracks or 'items' not in playlist_tracks:
                         continue
@@ -436,7 +508,7 @@ class SpotifyMoodAnalyzer:
                         if item and 'track' in item and item['track']:
                             all_tracks.append(item['track'])
                 
-                if len(all_tracks) >= 30:
+                if len(all_tracks) >= 50:  
                     break
                     
             except Exception as e:
@@ -444,6 +516,7 @@ class SpotifyMoodAnalyzer:
         
         if all_tracks:
             random.shuffle(all_tracks)
-            return all_tracks[:min(30, len(all_tracks))]
+            filtered_tracks = self._filter_already_recommended(all_tracks)
+            return filtered_tracks[:min(50, len(filtered_tracks))] 
         else:
             return []
