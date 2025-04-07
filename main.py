@@ -105,14 +105,19 @@ def user_recap():
                                'image_url': track['album']['images'][0]['url'] if track['album']['images'] else None,
                                'url': track['external_urls']['spotify']
                            } for track in user_data.get('top_tracks', {}).get('short_term', {}).get('items', [])],
-                           top_artists=[artist['name'] for artist in user_data.get('top_artists', {}).get('short_term', {}).get('items', [])[:5]],
+                           top_artists=[{
+                               'name': artist['name'],
+                               'image_url': artist['images'][0]['url'] if artist['images'] else None,
+                               'url': artist['external_urls']['spotify']
+                           } for artist in user_data.get('top_artists', {}).get('short_term', {}).get('items', [])[:5]],
                            top_genres=list(user_data.get('top_genres', {}).keys())[:5],
                            recently_played=[{
                                'name': track['track']['name'],
                                'artist': track['track']['artists'][0]['name'],
                                'image': track['track']['album']['images'][0]['url'],
                                'url': track['track']['external_urls']['spotify']
-                           } for track in user_data.get('recently_played', {}).get('items', [])[:5]]
+                           } for track in user_data.get('recently_played', {}).get('items', [])[:5]],
+                           current_year=datetime.now().year
                            )
 
 @app.route('/recommend', methods=['POST'])
