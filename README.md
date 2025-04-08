@@ -23,7 +23,7 @@ A web application that creates personalized Spotify playlists based on your mood
 
 ### Prerequisites
 
-- Python 3.7 or higher
+- Python 3.7 or higher (Personally used 3.12)
 - Spotify Developer account
 - Spotify Premium account (for optimal functionality)
 
