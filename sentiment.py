@@ -387,7 +387,7 @@ class SpotifyMoodAnalyzer:
             else:
                 result.extend(familiar_tracks)
                 
-        # Aggiungi tracce nuove
+        #Adding new tracks
         if new_tracks:
             if len(new_tracks) > new_count:
                 result.extend(random.sample(new_tracks, new_count))
@@ -467,7 +467,7 @@ class SpotifyMoodAnalyzer:
             except Exception as e:
                 print(f"Errore usando seed_artists: {e}")
         
-        # Second strategy
+        #Second strategy
         if len(new_recommendations) < target_new_tracks and familiar_tracks:
             try:
                 seed_tracks = random.sample([t['id'] for t in familiar_tracks if 'id' in t], 
@@ -596,7 +596,7 @@ class SpotifyMoodAnalyzer:
                 if not playlists:
                     continue
             
-                # Ridotto il numero di playlist da esaminare
+                #Less playlist to see
                 selected_playlists = random.sample(playlists, min(10, len(playlists)))
                 
                 for random_playlist in selected_playlists:
