@@ -55,7 +55,7 @@ python main.py
 5. Navigate to `http://localhost:5001` in your web browser
 
 ## Technical Architecture
-
+Architecture of the app has to be upgraded...
 ### Components
 
 - **Flask Web Server**: Handles HTTP requests and serves the web interface
