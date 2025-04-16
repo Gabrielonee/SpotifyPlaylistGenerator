@@ -116,7 +116,6 @@ class SpotifyMoodAnalyzer:
         )
         
         token_info = sp_oauth.get_cached_token()
-        
         if not token_info or sp_oauth.is_token_expired(token_info):
             return None
         else:
@@ -427,7 +426,7 @@ class SpotifyMoodAnalyzer:
             'sadness': ['sad', 'acoustic', 'piano', 'indie', 'folk', 'ambient', 'chill', 'indie-pop'],
             'anger': ['rock', 'metal', 'intense', 'punk', 'hardcore', 'grunge', 'alt-rock', 'industrial'],
             'fear': ['ambient', 'instrumental', 'classical', 'cinematic', 'soundtracks', 'atmospheric'],
-            'optimism': ['pop', 'indie', 'upbeat', 'folk', 'gospel', 'soul', 'indie-pop', 'alt-rock'],
+            'optimism': ['pop', 'indie', 'piano','upbeat', 'folk', 'gospel', 'soul', 'indie-pop', 'alt-rock'],
             'surprise': ['electronic', 'experimental', 'alternative', 'new-age', 'jazz', 'fusion', 'world-music'],
             'love': ['pop', 'r-n-b', 'soul', 'jazz', 'acoustic', 'singer-songwriter', 'indie', 'ballad']
         }
