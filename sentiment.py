@@ -74,10 +74,10 @@ class SpotifyMoodAnalyzer:
         # Timestamp dell'ultimo reset della cache
         self.last_cache_reset = datetime.datetime.now()
         
-        # Parametri per il bilanciamento tra canzoni familiari e nuove
-        self.familiar_proportion = 0.7  # 70% di canzoni familiari
-        self.similarity_threshold = 0.7  # Soglia di similarità per considerare una canzone familiare
-
+        self.familiar_proportion = 0.6 
+        self.similarity_threshold = 0.7  #Similarity thresold
+    
+    #Translate to english
     def translate_to_english(self, text):
         try:
             return GoogleTranslator(source='auto', target='en').translate(text)
@@ -86,7 +86,7 @@ class SpotifyMoodAnalyzer:
             return text
 
     def get_sentiment(self, prompt):
-        #Translate to english
+        
         prompt = self.translate_to_english(prompt)
         sentiment_score = self.analyze_sentiment(prompt)
         sentiment_label = self.label_sentiment(sentiment_score)
