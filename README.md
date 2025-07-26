@@ -1,21 +1,4 @@
-## Run with Docker
 
-You can run the application in a containerized environment using Docker. Make sure you have a `variables.env` file with your Spotify credentials in the project root.
-
-### Build the Docker image
-```sh
-docker build -t spotify-playlist-generator .
-```
-
-### Run the container
-```sh
-docker run --env-file variables.env -p 5001:5001 spotify-playlist-generator
-```
-
-Or with Docker Compose:
-```sh
-docker-compose up --build
-```
 
 The app will be available at [http://localhost:5001](http://localhost:5001)
 # Spotify Playlist Generator
@@ -74,16 +57,34 @@ SpotifyPlaylistGenerator/
 - spotipy
 - Other dependencies listed in `requirements.txt`
 
+## Run with Docker
+
+You can run the application in a containerized environment using Docker. Make sure you have a `variables.env` file with your Spotify credentials in the project root.
+
+### Build the Docker image
+```sh
+docker build -t spotify-playlist-generator .
+```
+
+### Run the container
+```sh
+docker run --env-file variables.env -p 5001:5001 spotify-playlist-generator
+```
+
+Or with Docker Compose:
+```sh
+docker-compose up --build
+```
+
 ## Setup & Run
 1. Clone the repository.
-2. Create a `.env` or `variables.env` file with your Spotify API credentials.
+2. Create a `.env`file with your Spotify API credentials.
 3. Install dependencies: `pip install -r requirements.txt`
 4. Run the app: `python main.py`
-5. Open your browser at `http://localhost:5000`
+5. Open your browser at `http://localhost:5001`
 
 ## Notes
-- Do not commit your `.env` or `variables.env` files.
-- The app is for educational and personal use. For production, review security and API usage limits.
+- Do not commit your `.env` or `variables.env` files. (use a gitignro file)
 
 ## License
 MIT License
