@@ -268,7 +268,7 @@
         <div class="user-info">
             {% if authenticated %}
                 <p>Hello, <strong>{{ user_name }}</strong>!</p>
-                <a href="{{ url_for('user_recap') }}"><i class="fas fa-chart-line"></i> Your recap</a>
+                <a href="{{ url_for('main.user_recap') }}"><i class="fas fa-chart-line"></i> Your recap</a>
             {% else %}
                 <a href="{{ login_url }}"><i class="fab fa-spotify"></i> Login with Spotify</a>
             {% endif %}
