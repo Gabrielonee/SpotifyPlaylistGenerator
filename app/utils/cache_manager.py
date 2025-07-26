@@ -1,4 +1,5 @@
 import datetime
+import random
 
 class RecommendationCache:
     def __init__(self, expiry_days=7):
