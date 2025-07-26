@@ -1,3 +1,23 @@
+## Run with Docker
+
+You can run the application in a containerized environment using Docker. Make sure you have a `variables.env` file with your Spotify credentials in the project root.
+
+### Build the Docker image
+```sh
+docker build -t spotify-playlist-generator .
+```
+
+### Run the container
+```sh
+docker run --env-file variables.env -p 5001:5001 spotify-playlist-generator
+```
+
+Or with Docker Compose:
+```sh
+docker-compose up --build
+```
+
+The app will be available at [http://localhost:5001](http://localhost:5001)
 # Spotify Playlist Generator
 
 ## Project Overview
