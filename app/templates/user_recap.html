@@ -406,10 +406,38 @@
                 height: 50px;
             }
         }
+
+         .home-btn {
+            position: absolute;
+            top: 2rem;
+            left: 2rem;
+            background: var(--spotify-green);
+            color: var(--spotify-black);
+            border: none;
+            border-radius: 50px;
+            padding: 0.6rem 1.2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: background 0.2s, color 0.2s, transform 0.2s;
+            z-index: 20;
+            text-decoration: none;
+        }
+        .home-btn:hover {
+            background: #19a34a;
+            color: #fff;
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
     <header class="header">
+        <a href="/" class="home-btn" title="Back to Home">
+            <i class="fas fa-arrow-left"></i>
+        </a>
         <div class="header-content">
             <div class="logo">
                 <i class="fab fa-spotify"></i>
@@ -418,6 +446,7 @@
             <p class="subtitle">Here's a personalized summary of your musical journey, {{ user }}</p>
         </div>
     </header>
+       
     
     <div class="nav-container">
         <div class="nav">
