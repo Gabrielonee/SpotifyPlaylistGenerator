@@ -130,24 +130,8 @@
       <p>Playlist based on your humor!</p>
       <p class="user-input">"{{ user_input }}"</p>
       <a href="{{ playlist_url }}" target="_blank" class="playlist-link">
-        Open in Spotify
+        Save in spotify
       </a>
-    </div>
-
-    <div class="emotion-analysis">
-      <h2>Sentiment Analysis</h2>
-      <div class="emotion-bars">
-        {% for emotion, score in analysis.items() %}
-        <div class="emotion-bar">
-          <label>{{ emotion|capitalize }}</label>
-          <div class="bar-container">
-            <div class="bar" style="width: {{ '%.0f'|format(score * 100) }}%">
-              {{ "%.0f"|format(score * 100) }}%
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
     </div>
 
     <h2 style="color: #1db954;">Tracks selected:</h2>
