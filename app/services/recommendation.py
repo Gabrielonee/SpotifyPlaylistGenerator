@@ -20,7 +20,7 @@ class RecommendationService:
         self.spotify_service = spotify_service
         self.mood_analysis_service = mood_analysis_service
         self.cache = RecommendationCache()
-        self.familiar_proportion = 0.6
+        self.familiar_proportion = 0.2
         self.last_cache_reset = datetime.datetime.now()
         self.cache_expiry_days = 7
         self.recommended_tracks_cache = set()
@@ -180,19 +180,48 @@ class RecommendationService:
                 # Add to cache
                 self.recommended_tracks_cache.add(track_id)
         
-        if len(new_tracks) < len(tracks) * 0.5 and len(tracks) > 0:
-            print("Tracce filtrate, aggiungendo alcune tracce già consigliate in proporzione ridotta")
-            already_recommended = [t for t in tracks if t.get('id') in self.recommended_tracks_cache]
-            if already_recommended:
-                # Max 20% tracks already recommended (before qwas 30%)
-                num_to_add = min(len(already_recommended), int(len(tracks) * 0.2))
-                new_tracks.extend(random.sample(already_recommended, num_to_add))
-        
+        # Non aggiungere tracce già consigliate, restituisci solo nuove se disponibili
         if new_tracks:
             return new_tracks
         else:
-            print("Tutte le tracce sono già state consigliate, restituendo le tracce originali")
-            return tracks
+            print("Tutte le tracce sono già state consigliate, nessuna nuova disponibile. Prendo dalla Top 50 globale o playlist famose.")
+            return self._get_global_popular_tracks()
+
+    def _get_global_popular_tracks(self, limit=30):
+        # Prova a prendere la Top 50 globale o playlist famose
+        tracks = []
+        try:
+            # Top 50 Global playlist ufficiale Spotify
+            top50 = self.spotify_service.sp.playlist("37i9dQZEVXbMDoHDwVN2tF")
+            if 'tracks' in top50 and 'items' in top50['tracks']:
+                for item in top50['tracks']['items']:
+                    if item and 'track' in item and item['track']:
+                        tracks.append(item['track'])
+            # Se non bastano, aggiungi da altre playlist famose
+            if len(tracks) < limit:
+                playlist_ids = [
+                    "37i9dQZF1DXcBWIGoYBM5M",  # Today's Top Hits
+                    "37i9dQZF1DX0XUsuxWHRQd",  # Hot Hits Italia
+                    "37i9dQZF1DX4dyzvuaRJ0n",  # Top 50 Italia
+                ]
+                for pid in playlist_ids:
+                    pl = self.spotify_service.sp.playlist(pid)
+                    if 'tracks' in pl and 'items' in pl['tracks']:
+                        for item in pl['tracks']['items']:
+                            if item and 'track' in item and item['track']:
+                                tracks.append(item['track'])
+                            if len(tracks) >= limit:
+                                break
+                    if len(tracks) >= limit:
+                        break
+        except Exception as e:
+            print(f"Errore nel recupero delle playlist globali: {e}")
+        # Rimuovi duplicati
+        unique = {}
+        for t in tracks:
+            if t.get('id') and t.get('id') not in unique:
+                unique[t['id']] = t
+        return list(unique.values())[:limit]
 
     def _get_familiar_tracks(self, sp_client, limit=50):
         familiar_tracks = []
