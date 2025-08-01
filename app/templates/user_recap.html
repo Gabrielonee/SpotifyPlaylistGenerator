@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spotify Recap</title>
@@ -551,37 +549,6 @@
     </footer>
 
     <script>
-        // Chart.js - grafico ascolti per giorno
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.Chart) {
-                var ctx = document.getElementById('listensChart').getContext('2d');
-                var listensChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: {{ chart_labels|tojson | safe }},
-                        datasets: [{
-                            label: 'Tracks played per day',
-                            data: {{ chart_data|tojson | safe }},
-                            backgroundColor: 'rgba(29,185,84,0.2)',
-                            borderColor: 'rgba(29,185,84,1)',
-                            borderWidth: 2,
-                            pointRadius: 3,
-                            fill: true,
-                            tension: 0.3
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            x: { title: { display: true, text: 'Date' } },
-                            y: { title: { display: true, text: 'Tracks played' }, beginAtZero: true }
-                        },
-                        plugins: {
-                            legend: { display: false }
-                        }
-                    }
-                });
-            }
-        });
         // Function to scroll to section
         function scrollToSection(sectionId) {
             document.getElementById(sectionId).scrollIntoView({ 
