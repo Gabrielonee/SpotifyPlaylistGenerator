@@ -1,7 +1,5 @@
 import logging
 from app.services.spotify_services import get_spotify_client, SpotifyService
-from app.services.mood_analysis import MoodAnalysisService
-from app.services.recommendation import RecommendationService
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +11,8 @@ _rec_service = None
 def _get_services():
     global _spotify_service, _mood_service, _rec_service
     if _spotify_service is None:
+        from app.services.mood_analysis import MoodAnalysisService
+        from app.services.recommendation import RecommendationService
         _spotify_service = SpotifyService()
         _mood_service = MoodAnalysisService()
         _rec_service = RecommendationService(_spotify_service, _mood_service)

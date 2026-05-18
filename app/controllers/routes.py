@@ -35,10 +35,11 @@ def user_recap():
 @main_bp.route('/recommend', methods=['POST'])
 def recommend():
     try:
-        user_input = request.form['user_input']
+        user_input = request.form.get('user_input', '').strip()
+        if not user_input:
+            return render_template('error.html', error='Inserisci una descrizione del tuo stato d\'animo.')
         result = process_recommendation_request(user_input)
         if result['success']:
-            # Passa sempre analysis, tracks, user_input, playlist_url
             return render_template('recommendations.html', **result['data'])
         else:
             return render_template('error.html', error=result['error'])
