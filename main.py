@@ -5,4 +5,4 @@ app = create_app()
 
 if __name__ == "__main__":
     debug = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
-    app.run(debug=debug, port=5001)
+    app.run(debug=debug, port=5001, threaded=True)
